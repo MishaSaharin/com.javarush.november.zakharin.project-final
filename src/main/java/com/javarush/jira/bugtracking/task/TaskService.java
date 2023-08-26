@@ -21,6 +21,7 @@ import org.springframework.util.Assert;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 import static com.javarush.jira.bugtracking.ObjectType.TASK;
 import static com.javarush.jira.bugtracking.task.TaskUtil.fillExtraFields;
@@ -39,6 +40,8 @@ public class TaskService {
     private final SprintRepository sprintRepository;
     private final TaskExtMapper extMapper;
     private final UserBelongRepository userBelongRepository;
+    private final int minLength = 2;
+    private final int maxLength = 32;
 
     @Transactional
     public void changeStatus(long taskId, String statusCode) {
@@ -139,5 +142,21 @@ public class TaskService {
         if (!userType.equals(possibleUserType)) {
             throw new DataConflictException(String.format(assign ? CANNOT_ASSIGN : CANNOT_UN_ASSIGN, userType, task.getStatusCode()));
         }
+    }
+
+    public void addTag(String tag, long taskId) {
+        Task task = handler.getRepository().getExisted(taskId);
+        Set<String> tags = task.getTags();
+        if (tags.isEmpty() || !tags.contains(tag)) {
+            validateAndAdd(tag, minLength, maxLength, tags);
+            handler.getRepository().save(task);
+        }
+    }
+
+    private void validateAndAdd(String tag, int min, int max, Set<String> tags) {
+        if (tag.length() >= min && tag.length() <= max) {
+            tags.add(tag);
+        } else throw new RuntimeException(
+                "Tag should be more than 2 but less than 32");
     }
 }
