@@ -18,6 +18,10 @@
                                th:text="#{index.header.button.docs}">Swagger API</a>
                         </li>
                     </ul>
+                    <div>
+                        <a href="?lang=en" type="button" class="btn btn-outline-warning" th:text="eng"></a>
+                        <a href="?lang=ru" type="button" class="btn btn-outline-warning me-5" th:text="рус"></a>
+                    </div>
                     <div th:if="${authUser} == null">
                         <a href="/view/login" type="button" class="btn btn-orange"
                            th:text="#{index.header.button.login}">Login/Register</a>

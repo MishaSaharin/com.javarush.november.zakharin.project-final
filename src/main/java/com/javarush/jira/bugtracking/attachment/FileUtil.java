@@ -27,8 +27,7 @@ public class FileUtil {
             if (!Files.exists(pathDir)) {
                 Files.createDirectories(pathDir);
             }
-            Path filePath = pathDir.resolve(fileName);
-            Files.copy(multipartFile.getInputStream(), filePath);
+            Files.copy(multipartFile.getInputStream(), pathDir.resolve(fileName));
         } catch (IOException ex) {
             throw new IllegalRequestDataException("Failed to upload file" + multipartFile.getOriginalFilename());
         }

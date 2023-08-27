@@ -40,8 +40,6 @@ public class TaskService {
     private final SprintRepository sprintRepository;
     private final TaskExtMapper extMapper;
     private final UserBelongRepository userBelongRepository;
-    private final int minLength = 2;
-    private final int maxLength = 32;
 
     @Transactional
     public void changeStatus(long taskId, String statusCode) {
@@ -144,19 +142,10 @@ public class TaskService {
         }
     }
 
-    public void addTag(String tag, long taskId) {
+    @Transactional
+    public void addTagsToTask(Long taskId, Set<String> setTags) {
         Task task = handler.getRepository().getExisted(taskId);
-        Set<String> tags = task.getTags();
-        if (tags.isEmpty() || !tags.contains(tag)) {
-            validateAndAdd(tag, minLength, maxLength, tags);
-            handler.getRepository().save(task);
-        }
-    }
-
-    private void validateAndAdd(String tag, int min, int max, Set<String> tags) {
-        if (tag.length() >= min && tag.length() <= max) {
-            tags.add(tag);
-        } else throw new RuntimeException(
-                "Tag should be more than 2 but less than 32");
+        task.getTags().addAll(setTags);
+        handler.getRepository().save(task);
     }
 }
