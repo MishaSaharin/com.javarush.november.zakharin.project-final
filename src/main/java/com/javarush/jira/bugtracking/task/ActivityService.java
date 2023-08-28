@@ -2,13 +2,18 @@ package com.javarush.jira.bugtracking.task;
 
 import com.javarush.jira.bugtracking.Handlers;
 import com.javarush.jira.bugtracking.task.to.ActivityTo;
+import com.javarush.jira.bugtracking.task.to.TaskStatus;
 import com.javarush.jira.common.error.DataConflictException;
 import com.javarush.jira.login.AuthUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 import static com.javarush.jira.bugtracking.task.TaskUtil.getLatestValue;
 
@@ -72,5 +77,35 @@ public class ActivityService {
                 task.setTypeCode(latestType);
             }
         }
+    }
+
+    public Duration calculateWorkingTime(long taskId) {
+        return calculateTime(taskId, TaskStatus.IN_PROGRESS, TaskStatus.READY);
+    }
+
+    public Duration calculateTestingTime(long taskId) {
+        return calculateTime(taskId, TaskStatus.READY, TaskStatus.DONE);
+    }
+
+    private Duration calculateTime(long taskId, TaskStatus startStatus, TaskStatus endStatus) {
+        ActivityRepository repository = handler.getRepository();
+        final List<Activity> activities = repository.getByStatusCodeInAndTaskId(
+                Set.of(startStatus.getCode(), endStatus.getCode()), taskId);
+
+        final Optional<Activity> startActivity = findByStatus(activities, startStatus);
+        final Optional<Activity> endActivity = findByStatus(activities, endStatus);
+
+        if (startActivity.isPresent() && endActivity.isPresent()) {
+            final LocalDateTime start = startActivity.get().getUpdated();
+            final LocalDateTime end = endActivity.get().getUpdated();
+
+            return Duration.between(start, end);
+        }
+        return null;
+    }
+
+    private Optional<Activity> findByStatus(List<Activity> activities, TaskStatus status) {
+        return activities.stream().filter(activity -> status.getCode().equalsIgnoreCase(activity.getStatusCode()))
+                .findAny();
     }
 }

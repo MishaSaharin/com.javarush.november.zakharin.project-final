@@ -5,12 +5,18 @@ import com.javarush.jira.bugtracking.UserBelongRepository;
 import com.javarush.jira.bugtracking.task.to.ActivityTo;
 import com.javarush.jira.bugtracking.task.to.TaskToExt;
 import com.javarush.jira.bugtracking.task.to.TaskToFull;
+import com.javarush.jira.common.util.JsonUtil;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
 
 import static com.javarush.jira.bugtracking.ObjectType.TASK;
 import static com.javarush.jira.bugtracking.task.TaskController.REST_URL;
@@ -20,6 +26,7 @@ import static com.javarush.jira.bugtracking.task.TaskTestData.NOT_FOUND;
 import static com.javarush.jira.bugtracking.task.TaskTestData.*;
 import static com.javarush.jira.common.util.JsonUtil.writeValue;
 import static com.javarush.jira.login.internal.web.UserTestData.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -32,12 +39,12 @@ class TaskControllerTest extends AbstractControllerTest {
     private static final String ACTIVITIES_REST_URL = REST_URL + "/activities";
     private static final String ACTIVITIES_REST_URL_SLASH = REST_URL + "/activities/";
     private static final String CHANGE_STATUS = "/change-status";
-
     private static final String PROJECT_ID = "projectId";
     private static final String SPRINT_ID = "sprintId";
     private static final String STATUS_CODE = "statusCode";
     private static final String USER_TYPE = "userType";
     private static final String ENABLED = "enabled";
+    private static final String TAGS = "/tags";
 
     @Autowired
     private TaskRepository taskRepository;
@@ -589,5 +596,30 @@ class TaskControllerTest extends AbstractControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.detail", is(String
                         .format("Not found assignment with userType=%s for task {%d} for user {%d}", TASK_DEVELOPER, TASK1_ID, ADMIN_ID))));
+    }
+
+    @Transactional
+    @Test
+    @WithUserDetails(value = USER_MAIL)
+    void addTags() throws Exception {
+
+        Optional<Task> optionalTask = taskRepository.findAll().stream().findAny();
+        assertTrue(optionalTask.isPresent());
+
+        Task task = optionalTask.get();
+        Long taskId = task.getId();
+        String tagOne = "Tag1";
+        String tagTwo = "Tag2";
+        List<String> newTags = List.of(tagOne, tagTwo);
+
+        String restUrl = TASKS_REST_URL_SLASH + taskId + TAGS;
+        perform(MockMvcRequestBuilders.post(restUrl)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(JsonUtil.writeValue(newTags)))
+                .andExpect(status().is2xxSuccessful());
+
+        @SuppressWarnings("DataFlowIssue")
+        Task updatedTask = taskRepository.getExisted(taskId);
+        assertThat(updatedTask.getTags(), Matchers.containsInAnyOrder(tagOne, tagTwo));
     }
 }
